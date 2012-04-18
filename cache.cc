@@ -4,6 +4,7 @@
                            2009
                 {aasamih,solihin}@ece.ncsu.edu
 ********************************************************/
+//Some of this code is reused. Original authors: Chris Barile & Chris Coffey
 
 #include <stdlib.h>
 #include <assert.h>
@@ -15,6 +16,7 @@ Cache::Cache(int s,int a,int b )
    ulong i, j;
    reads = readMisses = writes = 0; 
    writeMisses = writeBacks = currentCycle = 0;
+   ctcTransfers = 0;
 
    size       = (ulong)(s);
    lineSize   = (ulong)(b);
@@ -51,7 +53,7 @@ Cache::Cache(int s,int a,int b )
 /**you might add other parameters to Access()
 since this function is an entry point 
 to the memory hierarchy (i.e. caches)**/
-void Cache::Access(ulong addr,uchar op)
+void Cache::Access(ulong addr,uchar op, int shared)
 {
 	currentCycle++;/*per cache global counter to maintain LRU order 
 			among cache ways, updated on every cache access*/
@@ -60,20 +62,55 @@ void Cache::Access(ulong addr,uchar op)
 	else          reads++;
 	
 	cacheLine * line = findLine(addr);
-	if(line == NULL)/*miss*/
+	if((line == NULL) || (line.getFlags(INVALID)))/*miss*/
 	{
-		if(op == 'w') writeMisses++;
-		else readMisses++;
+      cacheLine *newline = fillLine(addr);
+		if(op == 'w')
+      {
+         writeMisses++;
+         newLine->setFlags(MODIFIED);
+         if(shared == 1)
+            ctcTransfers++;
 
-		cacheLine *newline = fillLine(addr);
-   		if(op == 'w') newline->setFlags(DIRTY);    
+         return 'W';
+      } 
+		else   //op = 'r'
+      {
+         readMisses++;
+         if(shared == 1)
+         {
+            newLine->setFlags(SHARED);
+            ctcTransfers++;
+         }
+         else
+         {
+            newLine->setFlags(EXCLUSIVE)
+         }
+
+         return 'R';
+      }   
 		
 	}
-	else
+	else //hit
 	{
 		/**since it's a hit, update LRU and update dirty flag**/
 		updateLRU(line);
-		if(op == 'w') line->setFlags(DIRTY);
+
+      if(op == 'r')
+      {
+         return '-';
+      }
+
+      //Op = 'w' from here on
+      ulong flag = line->getFlags();
+
+      if(flag == EXCLUSIVE)
+         line->setFlags(MODIFIED);
+      else if(flag == SHARED)
+      {
+         line->setFlags(MODIFIED)
+         return 'U';
+      }
 	}
 }
 
