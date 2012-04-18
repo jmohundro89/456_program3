@@ -4,6 +4,7 @@
                            2009
                 {aasamih,solihin}@ece.ncsu.edu
 ********************************************************/
+//Some of this code is reused. Original authors: Chris Barile & Chris Coffey
 
 #include <stdlib.h>
 #include <assert.h>
@@ -17,8 +18,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 	
-	ifstream fin;
-//	FILE * pFile;
+	FILE * pFile;
 
 	if(argv[1] == NULL){
 		 printf("input format: ");
@@ -50,37 +50,50 @@ int main(int argc, char *argv[])
     for(int k = 0; k <num_processors;k++){
         cachesArray[k] = new Cache(cache_size,cache_assoc, blk_size);
     }
-    string line;
-    int processorNumber;
-	uchar operation;
-	ulong address;
+    
 
-//	pFile = fopen (fname,"r");
-    	ifstream pFile (fname);
-//	if(pFile == 0)
-//	{   
-//		printf("Trace file problem\n");
-//		exit(0);
-//	}
-    if(pFile.is_open()){
-        
-		while(!pFile.eof()){
-			getline(pFile, line, ' ');
-			processorNumber = atoi(line.c_str());
-			if(!(processorNumber >=0 && processorNumber <= 8))break;
-			getline(pFile, line, ' ');
-			operation = line[0];
-			getline(pFile, line, '\n');
-			address = strtoul(line.c_str(), NULL, 16);   
-        }
-    }
+	pFile = fopen (fname,"r");
+	if(pFile == 0)
+	{   
+		printf("Trace file problem\n");
+		exit(0);
+	}
+    
           
 	///******************************************************************//
 	//**read trace file,line by line,each(processor#,operation,address)**//
 	//*****propagate each request down through memory hierarchy**********//
 	//*****by calling cachesArray[processor#]->Access(...)***************//
 	///******************************************************************//
-	pFile.close();
+	char currLine [20];
+	int proc_num;	
+	int shared = 0;
+	uchar op;
+	ulong address;
+	
+	while(!feof(pFile)) {
+		shared = 0;
+		if(fgets(currLine, 20, pFile) == NULL)
+			break;
+
+		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
+		for(int i = 0; i < num_processors; i++){
+			if(i != proc_num){
+				if(caches[i]->findLine(address) != NULL){
+					shared = 1;
+					break;
+				}
+			}
+		}
+		uchar busOps = caches[proc_num]->Access(address, op, shared, protocol);
+
+		for (int i = 0; i < num_processors; i++) {
+			if (i != proc_num) {
+				caches[i]->snoopRequest(address, busOps, protocol);
+			}
+		}
+	}
+	fclose(pFile);
 
 	//********************************//
 	//print out all caches' statistics //
