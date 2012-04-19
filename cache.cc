@@ -53,7 +53,7 @@ Cache::Cache(int s,int a,int b )
 /**you might add other parameters to Access()
 since this function is an entry point 
 to the memory hierarchy (i.e. caches)**/
-void Cache::Access(ulong addr,uchar op, int shared)
+uchar Cache::Access(ulong addr,uchar op, int shared)
 {
 	currentCycle++;/*per cache global counter to maintain LRU order 
 			among cache ways, updated on every cache access*/
@@ -179,11 +179,11 @@ cacheLine *Cache::fillLine(ulong addr)
   
    cacheLine *victim = findLineToReplace(addr);
    assert(victim != 0);
-   if(victim->getFlags() == DIRTY) writeBack(addr);
+   if(victim->getFlags() == MODIFIED) writeBack(addr);
     	
    tag = calcTag(addr);   
    victim->setTag(tag);
-   victim->setFlags(VALID);    
+   //victim->setFlags(VALID);    
    /**note that this cache line has been already 
       upgraded to MRU in the previous function (findLineToReplace)**/
 
@@ -196,3 +196,37 @@ void Cache::printStats()
 	/****print out the rest of statistics here.****/
 	/****follow the ouput file format**************/
 }
+
+void Cache::snoopRequest(ulong address, uchar busOp, int protocol){
+   cacheLine *line = findLine(address);
+   
+      if (line != NULL)
+      {
+         ulong flag = line->getFlags();
+         if(busOp == 'R')
+         {
+            if(flag == EXCLUSIVE)
+               line->setFlags(SHARED)
+            else if(flag == MODIFIED)
+            {
+               line->setFlags(SHARED)
+               writeBacks++;
+            }
+         }
+         else if(busOp == 'W')
+         {
+            if(flag == EXCLUSIVE)
+               line->setFlags(INVALID)
+            else if(flag == MODIFIED)
+            {
+               line->setFlags(INVALID)
+               writeBacks++;
+            }
+            else if(flag == SHARED)
+               line->setFlags(INVALID)
+         }
+         else if(busOp == 'U')
+         {
+            
+         }
+      }
