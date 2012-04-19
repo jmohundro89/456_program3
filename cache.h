@@ -17,9 +17,14 @@ typedef unsigned int uint;
 
 /****add new states, based on the protocol****/
 enum{
-	INVALID = 0,
-	VALID,
-	DIRTY
+	EMPTY = 0,
+	//VALID,
+	DIRTY,
+	EXCLUSIVE,
+	SHARED,
+	SHAREDCLEAN,
+	SHAREDMODIFIED,
+	MODIFIED,
 };
 
 class cacheLine 
@@ -37,15 +42,15 @@ public:
    void setSeq(ulong Seq)			{ seq = Seq;}
    void setFlags(ulong flags)			{  Flags = flags;}
    void setTag(ulong a)   { tag = a; }
-   void invalidate()      { tag = 0; Flags = INVALID; }//useful function
-   bool isValid()         { return ((Flags) != INVALID); }
+   void invalidate()      { tag = 0; Flags = EMPTY; }//useful function
+   bool isValid()         { return ((Flags) != EMPTY); }
 };
 
 class Cache
 {
 protected:
    ulong size, lineSize, assoc, sets, log2Sets, log2Blk, tagMask, numLines;
-   ulong reads,readMisses,writes,writeMisses,writeBacks;
+   ulong reads,readMisses,writes,writeMisses,writeBacks,ctcTransfers,writeThroughs;
 
    //******///
    //add coherence counters here///
@@ -72,13 +77,15 @@ public:
    ulong getWB(){return writeBacks;}
    
    void writeBack(ulong)   {writeBacks++;}
-   void Access(ulong,uchar);
-   void printStats();
+   uchar Access(ulong,uchar,int,int);
+   void printStats(int);
    void updateLRU(cacheLine *);
 
    //******///
    //add other functions to handle bus transactions///
    //******///
+	
+	void snoopRequest(ulong, uchar, int);
 
 };
 
