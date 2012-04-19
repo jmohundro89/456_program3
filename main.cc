@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <fstream>
-#include <stdio.h>
-#include <iostream>
 using namespace std;
 
 #include "cache.h"
@@ -30,10 +28,10 @@ int main(int argc, char *argv[])
 	int cache_size = atoi(argv[1]);
 	int cache_assoc= atoi(argv[2]);
 	int blk_size   = atoi(argv[3]);
-	int num_processors = 4;/*1, 2, 4, 8*/
+	int num_processors = atoi(argv[4]);/*1, 2, 4, 8*/
 	//int protocol   = atoi(argv[5]);	 /*0:MSI, 1:MESI, 2:MOESI*/
 	char *fname =  (char *)malloc(20);
- 	fname = argv[4];
+ 	fname = argv[5];
 
 	
 	//****************************************************//
@@ -79,17 +77,18 @@ int main(int argc, char *argv[])
 		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
 		for(int i = 0; i < num_processors; i++){
 			if(i != proc_num){
-				if(caches[i]->findLine(address) != NULL){
+				if(cachesArray[i]->findLine(address) != NULL){
 					shared = 1;
 					break;
 				}
 			}
 		}
-		uchar busOps = caches[proc_num]->Access(address, op, shared, protocol);
+
+		uchar busOps = cachesArray[proc_num]->Access(address, op, shared);
 
 		for (int i = 0; i < num_processors; i++) {
 			if (i != proc_num) {
-				caches[i]->snoopRequest(address, busOps, protocol);
+				cachesArray[i]->snoopRequest(address, busOps);
 			}
 		}
 	}
@@ -98,5 +97,13 @@ int main(int argc, char *argv[])
 	//********************************//
 	//print out all caches' statistics //
 	//********************************//
-	
+	printf("===== 506 SMP Simulator Configuration =====\n");
+	printf("L1_SIZE:               %d\n", cache_size);
+	printf("L1_ASSOC:              %d\n", cache_assoc);
+	printf("L1_BLOCKSIZE:          %d\n", blk_size);
+	printf("NUMBER OF PROCESSORS:  %d\n", num_processors);	
+	printf("TRACE FILE:            %s\n", fname);
+	for(int i = 0; i < num_processors; i++){
+	cachesArray[i]->printStats(i);
+	}
 }
