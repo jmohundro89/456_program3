@@ -17,14 +17,12 @@ typedef unsigned int uint;
 
 /****add new states, based on the protocol****/
 enum{
-	EMPTY = 0,
-	//VALID,
-	DIRTY,
-	EXCLUSIVE,
-	SHARED,
-	SHAREDCLEAN,
-	SHAREDMODIFIED,
-	MODIFIED,
+	INVALID = 0,
+   SHARED,
+   EXCLUSIVE,
+   MODIFIED,
+	VALID,
+	DIRTY
 };
 
 class cacheLine 
@@ -42,15 +40,15 @@ public:
    void setSeq(ulong Seq)			{ seq = Seq;}
    void setFlags(ulong flags)			{  Flags = flags;}
    void setTag(ulong a)   { tag = a; }
-   void invalidate()      { tag = 0; Flags = EMPTY; }//useful function
-   bool isValid()         { return ((Flags) != EMPTY); }
+   void invalidate()      { tag = 0; Flags = INVALID; }//useful function
+   bool isValid()         { return ((Flags) != INVALID); }
 };
 
 class Cache
 {
 protected:
    ulong size, lineSize, assoc, sets, log2Sets, log2Blk, tagMask, numLines;
-   ulong reads,readMisses,writes,writeMisses,writeBacks,ctcTransfers,writeThroughs;
+   ulong reads,readMisses,writes,writeMisses,writeBacks,ctcTransfers,invalidations;
 
    //******///
    //add coherence counters here///
@@ -77,15 +75,15 @@ public:
    ulong getWB(){return writeBacks;}
    
    void writeBack(ulong)   {writeBacks++;}
-   uchar Access(ulong,uchar,int,int);
+   uchar Access(ulong,uchar,int);
    void printStats(int);
    void updateLRU(cacheLine *);
 
    //******///
    //add other functions to handle bus transactions///
    //******///
-	
-	void snoopRequest(ulong, uchar, int);
+
+   void snoopRequest(ulong, uchar);
 
 };
 
