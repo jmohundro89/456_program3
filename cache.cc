@@ -16,7 +16,7 @@ Cache::Cache(int s,int a,int b )
    ulong i, j;
    reads = readMisses = writes = 0; 
    writeMisses = writeBacks = currentCycle = 0;
-   ctcTransfers = 0;
+   ctcTransfers = invalidations = 0;
 
    size       = (ulong)(s);
    lineSize   = (ulong)(b);
@@ -62,9 +62,9 @@ uchar Cache::Access(ulong addr,uchar op, int shared)
 	else          reads++;
 	
 	cacheLine * line = findLine(addr);
-	if((line == NULL) || (line.getFlags(INVALID)))/*miss*/
+	if((line == NULL) || (line->getFlags() == INVALID))/*miss*/
 	{
-      cacheLine *newline = fillLine(addr);
+      cacheLine *newLine = fillLine(addr);
 		if(op == 'w')
       {
          writeMisses++;
@@ -84,7 +84,7 @@ uchar Cache::Access(ulong addr,uchar op, int shared)
          }
          else
          {
-            newLine->setFlags(EXCLUSIVE)
+            newLine->setFlags(EXCLUSIVE);
          }
 
          return 'R';
@@ -108,10 +108,11 @@ uchar Cache::Access(ulong addr,uchar op, int shared)
          line->setFlags(MODIFIED);
       else if(flag == SHARED)
       {
-         line->setFlags(MODIFIED)
+         line->setFlags(MODIFIED);
          return 'U';
       }
 	}
+   return '-';
 }
 
 /*look up line*/
@@ -190,14 +191,23 @@ cacheLine *Cache::fillLine(ulong addr)
    return victim;
 }
 
-void Cache::printStats()
+void Cache::printStats(int proc_num)
 { 
-	printf("===== Simulation results      =====\n");
-	/****print out the rest of statistics here.****/
-	/****follow the ouput file format**************/
+	printf("===== Simulation results (Cache_%d)      =====\n", proc_num);
+   /****print out the rest of statistics here.****/
+   /****follow the ouput file format**************/
+   printf("01. number of reads:                              %lu\n", reads);
+   printf("02. number of read misses:                        %lu\n", getRM());
+   printf("03. number of writes:                             %lu\n", writes);
+   printf("04. number of write misses:                       %lu\n", getWM());
+   printf("05. total miss rate:                              %f\n", 
+      float(readMisses + writeMisses)/float(reads+writes));
+   printf("06. number of writebacks:                         %lu\n", writeBacks);
+   printf("07. number of invalidations:                      %lu\n", invalidations);
+   printf("08. number of cache to cache transfers:           %lu\n", (ctcTransfers));
 }
 
-void Cache::snoopRequest(ulong address, uchar busOp, int protocol){
+void Cache::snoopRequest(ulong address, uchar busOp){
    cacheLine *line = findLine(address);
    
       if (line != NULL)
@@ -206,27 +216,38 @@ void Cache::snoopRequest(ulong address, uchar busOp, int protocol){
          if(busOp == 'R')
          {
             if(flag == EXCLUSIVE)
-               line->setFlags(SHARED)
+               line->setFlags(SHARED);
             else if(flag == MODIFIED)
             {
-               line->setFlags(SHARED)
-               writeBacks++;
+               line->setFlags(SHARED);
+               //writeBacks++;
             }
          }
          else if(busOp == 'W')
          {
             if(flag == EXCLUSIVE)
-               line->setFlags(INVALID)
+            {
+               line->setFlags(INVALID);
+               invalidations++;
+            }
             else if(flag == MODIFIED)
             {
-               line->setFlags(INVALID)
-               writeBacks++;
+               line->setFlags(INVALID);
+               invalidations++;
             }
             else if(flag == SHARED)
-               line->setFlags(INVALID)
+            {
+               line->setFlags(INVALID);
+               invalidations++;
+            }
          }
          else if(busOp == 'U')
          {
-            
+            if(flag == SHARED)
+            {
+               line->setFlags(INVALID);
+               invalidations++;
+            }
          }
       }
+}
