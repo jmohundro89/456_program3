@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 
 	if(argv[1] == NULL){
 		 printf("input format: ");
-		 printf("./smp_cache <cache_size> <assoc> <block_size> <num_processors> <protocol> <trace_file> \n");
+		 printf("./smp_cache <cache_size> <block_size> <trace_file> \n");
 		 exit(0);
         }
 
@@ -28,10 +28,9 @@ int main(int argc, char *argv[])
 	int cache_size = atoi(argv[1]);
 	int cache_assoc= atoi(argv[2]);
 	int blk_size   = atoi(argv[3]);
-	int num_processors = atoi(argv[4]);/*1, 2, 4, 8*/
-	//int protocol   = atoi(argv[5]);	 /*0:MSI, 1:MESI, 2:MOESI*/
 	char *fname =  (char *)malloc(20);
- 	fname = argv[5];
+ 	fname = argv[4];
+ 	int num_processors = 4;
 
 	
 	//****************************************************//
@@ -68,6 +67,14 @@ int main(int argc, char *argv[])
 	int shared = 0;
 	uchar op;
 	ulong address;
+
+	//make the directory
+	int totEntries = (cache_size / blk_size) * num_processors;
+	ulong block_num[totEntries] = { 0 };
+	int inUse[totEntries] = { 0 };
+	uchar blk_state[totEntries] = { 'U' }; // 'E' = EM state
+	int bitVector[totEntries][num_processors] = { 0 }; //1 = in this cache, 0 = not in this cache
+	int x = 0; //keeps track of where to insert next entry in directory
 	
 	while(!feof(pFile)) {
 		shared = 0;
@@ -75,14 +82,76 @@ int main(int argc, char *argv[])
 			break;
 
 		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
-		for(int i = 0; i < num_processors; i++){
-			if(i != proc_num){
-				if(cachesArray[i]->findLine(address) != NULL){
-					shared = 1;
+
+		ulong tag = ( address >> (ulong)log2(blk_size) );
+		int tempLine = -1;
+		for(int i = 0; i < totEntries; i++){//look for block in directory
+			if{inUse[i] == 1}{
+				if(block_num[i] == tag){ //found in directory
+					tempLine = i;
+					if(blk_state[i] == 'U'){
+						if(op == 'w'){ //write
+							blk_state[i] = 'E';
+							bitVector[i][proc_num] = 1;
+						}
+						else{ //read
+							for(int q = 0; q < num_processors; q++){
+								if( (q != proc_num) && (bitVector[i][q] == 1) ){ //block is shared
+									shared = 1;
+									break;
+								}
+							}
+							if(shared == 1){
+								blk_state[i] = 'S';
+								bitVector[i][proc_num] = 1;
+							}
+							else{
+								blk_state[i] = 'E';
+								bitVector[i][proc_num] = 1;
+							}							
+						}
+					}
+					else if(blk_state[i] == 'S'){
+						if(op == 'r'){ //read
+							bitVector[i][proc_num] = 1;
+							shared = 1;
+						}
+						else{ //write
+							blk_state[i] = 'E';
+							bitVector[i][proc_num] = 1;
+							shared = 1;
+							for(int q = 0; q < num_processors; q++){
+								if( (q != proc_num) && (bitVector[i][q] == 1) ){
+									cachesArray[i]->snoopRequest(address, 'W');
+								}
+							}
+						}
+					}
+					else if(blk_state[i] == 'E'){
+						if(op == 'r'){ //read
+							blk_state[i] = 'S';
+							bitVector[i][proc_num] = 1;
+							//maybe the only ctcTransfers happen here? B/c of Interrupt?
+						}
+						else{ //write
+							
+						}
+					}
 					break;
 				}
 			}
 		}
+
+		//block is not in directory at all - a read or write op will have same results
+		if(tempLine == -1){
+			shared = 0;
+			block_num[x] = tag;
+			inUse[x] = 1;
+			blk_state[x] = 'E';
+			bitVector[x][proc_num] = 1;
+			x++;
+		}
+
 
 		uchar busOps = cachesArray[proc_num]->Access(address, op, shared);
 
