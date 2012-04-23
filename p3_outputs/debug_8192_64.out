@@ -19,7 +19,7 @@ TRACE FILE:            canneal.04t.debug
 03. number of writes:                             229
 04. number of write misses:                       2
 05. total miss rate:                              0.089494
-06. number of writebacks:                         11
+06. number of writebacks:                         8
 07. number of invalidations:                      34
 08. number of cache to cache transfers:           49
 ===== Simulation results (Cache_2)      =====
@@ -28,7 +28,7 @@ TRACE FILE:            canneal.04t.debug
 03. number of writes:                             253
 04. number of write misses:                       2
 05. total miss rate:                              0.081918
-06. number of writebacks:                         8
+06. number of writebacks:                         5
 07. number of invalidations:                      35
 08. number of cache to cache transfers:           0
 ===== Simulation results (Cache_3)      =====
@@ -37,6 +37,6 @@ TRACE FILE:            canneal.04t.debug
 03. number of writes:                             204
 04. number of write misses:                       0
 05. total miss rate:                              0.106765
-06. number of writebacks:                         12
+06. number of writebacks:                         10
 07. number of invalidations:                      32
 08. number of cache to cache transfers:           8
