@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 		ulong tag = ( address >> (ulong)log2(blk_size) );
 		int tempLine = -1;
 		for(int i = 0; i < totEntries; i++){//look for block in directory
-			if{inUse[i] == 1}{
+			if(inUse[i] == 1){
 				if(block_num[i] == tag){ //found in directory
 					tempLine = i;
 					if(blk_state[i] == 'U'){
@@ -165,11 +165,11 @@ int main(int argc, char *argv[])
 
 		uchar busOps = cachesArray[proc_num]->Access(address, op, shared);
 
-		for (int i = 0; i < num_processors; i++) {
+		/*for (int i = 0; i < num_processors; i++) {
 			if (i != proc_num) {
 				cachesArray[i]->snoopRequest(address, busOps);
 			}
-		}
+		}*/
 	}
 	fclose(pFile);
 
