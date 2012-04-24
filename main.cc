@@ -73,12 +73,21 @@ printf("Test");
 	//int totEntries = (cache_size / blk_size) * num_processors;
 	int totEntries = 2;
 	ulong * block_num = new ulong[totEntries];
+	for(int i = 0; i < totEntries; i++){
+		block_num[i] = 0;
+	}
 	//ulong block_num[totEntries];
 	//memset(block_num, 0, sizeof(block_num));
 	int * inUse = new int[totEntries];
+	for(int i = 0; i < totEntries; i ++){
+		inUse[i] = 0;
+	}
 	//int inUse[totEntries];
 	//memset(inUse, 0, sizeof(inUse));
 	uchar * blk_state = new uchar[totEntries];
+	for(int i = 0; i < totEntries; i++){
+		blk_state[i] = 'U';
+	}
 	//uchar blk_state[totEntries]; // 'E' = EM state
 	//memset(blk_state, 'U', sizeof(blk_state));
 	int ** bitVector = new int*[totEntries];
@@ -88,7 +97,8 @@ printf("Test");
 	//int bitVector[totEntries][num_processors]; //1 = in this cache, 0 = not in this cache
 	//memset(bitVector, 0, sizeof(bitVector));
 	int x = 0; //keeps track of where to insert next entry in directory
-	
+	x = 0;
+
 	while(!feof(pFile)) {
 		shared = 0;
 		cached = 0;
@@ -106,7 +116,7 @@ printf("Test");
 			}
 		}*/
 
-		/*if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
+		if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
 			cached = 1;
 
 		ulong tag = ( address >> (ulong)log2(blk_size) );
@@ -119,60 +129,57 @@ printf("Test");
 					if(blk_state[i] == 'U'){
 						if(op == 'w'){ //write
 							blk_state[i] = 'E';
-							bitVector[i][proc_num] = 1;
+							//bitVector[i][proc_num] = 1;
 						}
 						else if(cached == 0){ //read
 							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (bitVector[i][q] == 1) ){ //block is shared
+								//if( (q != proc_num) && (bitVector[i][q] == 1) ){ //block is shared
 									shared = 1;
 									break;
 								}
-							}
 							if(shared == 1){
 								blk_state[i] = 'S';
-								bitVector[i][proc_num] = 1;
+								//bitVector[i][proc_num] = 1;
 							}
 							else{
 								blk_state[i] = 'E';
-								bitVector[i][proc_num] = 1;
+								//bitVector[i][proc_num] = 1;
 							}							
 						}
 					}
 					else if(blk_state[i] == 'S'){
 						if(op == 'r' && cached == 0){ //read
-							bitVector[i][proc_num] = 1;
+							//bitVector[i][proc_num] = 1;
 							shared = 1;
 						}
 						else{ //write
 							blk_state[i] = 'E';
-							bitVector[i][proc_num] = 1;
+							//bitVector[i][proc_num] = 1;
 							shared = 1;
 							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (bitVector[i][q] == 1) ){
+								//if( (q != proc_num) && (bitVector[i][q] == 1) ){
 									cachesArray[i]->snoopRequest(address, 'W');
 								}
 							}
 						}
-					}
 					else if(blk_state[i] == 'E'){
 						if(op == 'r' && cached == 0){ //read
 							blk_state[i] = 'S';
-							bitVector[i][proc_num] = 1;
+							//bitVector[i][proc_num] = 1;
 							//maybe ctcTransfers only happen here? B/c of Interrupt?
 						}
 						else if(cached == 0){ //write
 							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (bitVector[i][q] == 1) ){
+								//if( (q != proc_num) && (bitVector[i][q] == 1) ){
 									cachesArray[i]->snoopRequest(address, 'W');
 								}
 							}
-							bitVector[i][proc_num] = 1;
+							//bitVector[i][proc_num] = 1;
 						}
 					}
 					break;
 				}
 			}
-		}
 
 		//block is not in directory at all - a read or write op will have same results
 		if(tempLine == -1){
@@ -180,19 +187,19 @@ printf("Test");
 			block_num[x] = tag;
 			inUse[x] = 1;
 			blk_state[x] = 'E';
-			bitVector[x][proc_num] = 1;
+			//bitVector[x][proc_num] = 1;
 			x++;
-		}*/
+		}
 
 
 		uchar busOps = cachesArray[proc_num]->Access(address, op, shared);
-		//busOps = 'C';
+		busOps = 'C';
 
-		for (int i = 0; i < num_processors; i++) {
+		/*for (int i = 0; i < num_processors; i++) {
 			if (i != proc_num) {
 				cachesArray[i]->snoopRequest(address, busOps);
 			}
-		}
+		}*/
 	}
 	fclose(pFile);
 
