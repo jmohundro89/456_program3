@@ -71,10 +71,14 @@ int main(int argc, char *argv[])
 
 	//make the directory
 	int totEntries = (cache_size / blk_size) * num_processors;
-	ulong block_num[totEntries] = { 0 };
-	int inUse[totEntries] = { 0 };
-	uchar blk_state[totEntries] = { 'U' }; // 'E' = EM state
-	int bitVector[totEntries][num_processors] = { 0 }; //1 = in this cache, 0 = not in this cache
+	ulong block_num[totEntries];
+	memset(block_num, 0, sizeof(block_num));
+	int inUse[totEntries];
+	memset(inUse, 0, sizeof(inUse));
+	uchar blk_state[totEntries]; // 'E' = EM state
+	memset(blk_state, 'U', sizeof(blk_state));
+	int bitVector[totEntries][num_processors]; //1 = in this cache, 0 = not in this cache
+	memset(bitVector, 0, sizeof(bitVector));
 	int x = 0; //keeps track of where to insert next entry in directory
 	
 	while(!feof(pFile)) {
@@ -164,6 +168,7 @@ int main(int argc, char *argv[])
 
 
 		uchar busOps = cachesArray[proc_num]->Access(address, op, shared);
+		busOps = 'C';
 
 		/*for (int i = 0; i < num_processors; i++) {
 			if (i != proc_num) {
