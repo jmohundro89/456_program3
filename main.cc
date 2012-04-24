@@ -95,11 +95,8 @@ int main(int argc, char *argv[])
 		ulong tag = ( address >> (ulong)log2(blk_size) );
 		int tempLine = -1;
 		for(int i = 0; i < totEntries; i++){//look for block in directory
-<<<<<<< HEAD
-			if(inUse[i] == 1){///changed {} with if to ()
-=======
+
 			if(inUse[i] == 1){
->>>>>>> ba49a88d98a73919f10fcc3c1629461d4fa8c4f9
 				if(block_num[i] == tag){ //found in directory
 					tempLine = i;
 					if(blk_state[i] == 'U'){
