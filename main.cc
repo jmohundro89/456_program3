@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 
 	if(argv[1] == NULL){
 		 printf("input format: ");
-		 printf("./smp_cache <cache_size> <block_size> <trace_file> \n");
+		 printf("./smp_cache <cache_size> <assoc> <block_size> <trace_file> \n");
 		 exit(0);
         }
 
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 	//**printf("===== Simulator configuration =====\n");**//
 	//*******print out simulator configuration here*******//
 	//****************************************************//
-
+printf("Test");
  
 	//*********************************************//
         //*****create an array of caches here**********//
@@ -70,15 +70,23 @@ int main(int argc, char *argv[])
 	ulong address;
 
 	//make the directory
-	int totEntries = (cache_size / blk_size) * num_processors;
-	ulong block_num[totEntries];
-	memset(block_num, 0, sizeof(block_num));
-	int inUse[totEntries];
-	memset(inUse, 0, sizeof(inUse));
-	uchar blk_state[totEntries]; // 'E' = EM state
-	memset(blk_state, 'U', sizeof(blk_state));
-	int bitVector[totEntries][num_processors]; //1 = in this cache, 0 = not in this cache
-	memset(bitVector, 0, sizeof(bitVector));
+	//int totEntries = (cache_size / blk_size) * num_processors;
+	int totEntries = 2;
+	ulong * block_num = new ulong[totEntries];
+	//ulong block_num[totEntries];
+	//memset(block_num, 0, sizeof(block_num));
+	int * inUse = new int[totEntries];
+	//int inUse[totEntries];
+	//memset(inUse, 0, sizeof(inUse));
+	uchar * blk_state = new uchar[totEntries];
+	//uchar blk_state[totEntries]; // 'E' = EM state
+	//memset(blk_state, 'U', sizeof(blk_state));
+	int ** bitVector = new int*[totEntries];
+	for(int i = 0; i < totEntries; i++){
+		bitVector[i] = new int[4];
+	}
+	//int bitVector[totEntries][num_processors]; //1 = in this cache, 0 = not in this cache
+	//memset(bitVector, 0, sizeof(bitVector));
 	int x = 0; //keeps track of where to insert next entry in directory
 	
 	while(!feof(pFile)) {
@@ -89,7 +97,16 @@ int main(int argc, char *argv[])
 
 		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
 
-		if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
+		/*for (int i = 0; i < num_processors; i++) {
+			if (i != proc_num) {
+				if(cachesArray[i]->findLine(address) != NULL){
+					shared = 1;
+					break;
+				}
+			}
+		}*/
+
+		/*if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
 			cached = 1;
 
 		ulong tag = ( address >> (ulong)log2(blk_size) );
@@ -165,17 +182,17 @@ int main(int argc, char *argv[])
 			blk_state[x] = 'E';
 			bitVector[x][proc_num] = 1;
 			x++;
-		}
+		}*/
 
 
 		uchar busOps = cachesArray[proc_num]->Access(address, op, shared);
-		busOps = 'C';
+		//busOps = 'C';
 
-		/*for (int i = 0; i < num_processors; i++) {
+		for (int i = 0; i < num_processors; i++) {
 			if (i != proc_num) {
 				cachesArray[i]->snoopRequest(address, busOps);
 			}
-		}*/
+		}
 	}
 	fclose(pFile);
 
