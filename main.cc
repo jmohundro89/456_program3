@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
 	char currLine [20];
 	int proc_num;	
 	int shared = 0;
+	int cached = 0;
 	uchar op;
 	ulong address;
 
@@ -78,10 +79,14 @@ int main(int argc, char *argv[])
 	
 	while(!feof(pFile)) {
 		shared = 0;
+		cached = 0;
 		if(fgets(currLine, 20, pFile) == NULL)
 			break;
 
 		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
+
+		if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
+			cached = 1;
 
 		ulong tag = ( address >> (ulong)log2(blk_size) );
 		int tempLine = -1;
@@ -94,7 +99,7 @@ int main(int argc, char *argv[])
 							blk_state[i] = 'E';
 							bitVector[i][proc_num] = 1;
 						}
-						else{ //read
+						else if(cached == 0){ //read
 							for(int q = 0; q < num_processors; q++){
 								if( (q != proc_num) && (bitVector[i][q] == 1) ){ //block is shared
 									shared = 1;
@@ -112,7 +117,7 @@ int main(int argc, char *argv[])
 						}
 					}
 					else if(blk_state[i] == 'S'){
-						if(op == 'r'){ //read
+						if(op == 'r' && cached == 0){ //read
 							bitVector[i][proc_num] = 1;
 							shared = 1;
 						}
@@ -128,13 +133,18 @@ int main(int argc, char *argv[])
 						}
 					}
 					else if(blk_state[i] == 'E'){
-						if(op == 'r'){ //read
+						if(op == 'r' && cached == 0){ //read
 							blk_state[i] = 'S';
 							bitVector[i][proc_num] = 1;
-							//maybe the only ctcTransfers happen here? B/c of Interrupt?
+							//maybe ctcTransfers only happen here? B/c of Interrupt?
 						}
-						else{ //write
-							
+						else if(cached == 0){ //write
+							for(int q = 0; q < num_processors; q++){
+								if( (q != proc_num) && (bitVector[i][q] == 1) ){
+									cachesArray[i]->snoopRequest(address, 'W');
+								}
+							}
+							bitVector[i][proc_num] = 1;
 						}
 					}
 					break;
