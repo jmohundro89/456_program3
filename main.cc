@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
 	//make the directory
 	//int totEntries = (cache_size / blk_size) * num_processors;
-	int totEntries = 512;
+	int totEntries = 2;
 	ulong * block_num = new ulong[totEntries];
 	for(int i = 0; i < totEntries; i++){
 		block_num[i] = 0;
