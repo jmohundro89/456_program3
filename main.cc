@@ -127,6 +127,7 @@ int main(int argc, char *argv[])
 		ulong tag = ( address >> (ulong)log2(blk_size) );
 		int tempLine = -1;
 		for(int i = 0; i < totEntries; i++){//look for block in directory
+		tempLine = -1;
 
 			if(inUse[i] == 1){
 				if(block_num[i] == tag){ //found in directory
@@ -134,57 +135,60 @@ int main(int argc, char *argv[])
 					if(blk_state[i] == 'U'){
 						if(op == 'w'){ //write
 							blk_state[i] = 'E';
-							//bitVector[i][proc_num] = 1;
+							bitVector[i][proc_num] = 1;
 						}
 						else if(cached == 0){ //read
 							for(int q = 0; q < num_processors; q++){
-								//if( (q != proc_num) && (bitVector[i][q] == 1) ){ //block is shared
+								if( (q != proc_num) && (bitVector[i][q] == 1) ){ //block is shared
 									shared = 1;
 									break;
 								}
+							}
 							if(shared == 1){
 								blk_state[i] = 'S';
-								//bitVector[i][proc_num] = 1;
+								bitVector[i][proc_num] = 1;
 							}
 							else{
 								blk_state[i] = 'E';
-								//bitVector[i][proc_num] = 1;
+								bitVector[i][proc_num] = 1;
 							}							
 						}
 					}
 					else if(blk_state[i] == 'S'){
 						if(op == 'r' && cached == 0){ //read
-							//bitVector[i][proc_num] = 1;
+							bitVector[i][proc_num] = 1;
 							shared = 1;
 						}
 						else{ //write
 							blk_state[i] = 'E';
-							//bitVector[i][proc_num] = 1;
+							bitVector[i][proc_num] = 1;
 							shared = 1;
 							for(int q = 0; q < num_processors; q++){
-								//if( (q != proc_num) && (bitVector[i][q] == 1) ){
+								if( (q != proc_num) && (bitVector[i][q] == 1) ){
 									cachesArray[i]->snoopRequest(address, 'W');
 								}
 							}
 						}
+					}
 					else if(blk_state[i] == 'E'){
 						if(op == 'r' && cached == 0){ //read
 							blk_state[i] = 'S';
-							//bitVector[i][proc_num] = 1;
+							bitVector[i][proc_num] = 1;
 							//maybe ctcTransfers only happen here? B/c of Interrupt?
 						}
-						else if(cached == 0){ //write
+						else if(op == 'w' && cached == 0){ //write
 							for(int q = 0; q < num_processors; q++){
-								//if( (q != proc_num) && (bitVector[i][q] == 1) ){
+								if( (q != proc_num) && (bitVector[i][q] == 1) ){
 									cachesArray[i]->snoopRequest(address, 'W');
 								}
 							}
-							//bitVector[i][proc_num] = 1;
+							bitVector[i][proc_num] = 1;
 						}
 					}
 					break;
 				}
 			}
+		}
 
 		//block is not in directory at all - a read or write op will have same results
 		if(tempLine == -1){
