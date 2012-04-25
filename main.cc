@@ -37,7 +37,6 @@ int main(int argc, char *argv[])
 	//**printf("===== Simulator configuration =====\n");**//
 	//*******print out simulator configuration here*******//
 	//****************************************************//
-printf("Test");
  
 	//*********************************************//
         //*****create an array of caches here**********//
@@ -94,6 +93,12 @@ printf("Test");
 	for(int i = 0; i < totEntries; i++){
 		bitVector[i] = new int[4];
 	}
+	for(int i = 0; i < totEntries; i++){
+		for(int j = 0; j < 4; j++){
+			bitVector[i][j] = 0;
+		}
+	}
+	
 	//int bitVector[totEntries][num_processors]; //1 = in this cache, 0 = not in this cache
 	//memset(bitVector, 0, sizeof(bitVector));
 	int x = 0; //keeps track of where to insert next entry in directory
