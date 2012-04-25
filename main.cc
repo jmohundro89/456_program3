@@ -71,7 +71,7 @@ printf("Test");
 
 	//make the directory
 	//int totEntries = (cache_size / blk_size) * num_processors;
-	int totEntries = 2;
+	int totEntries = 512;
 	ulong * block_num = new ulong[totEntries];
 	for(int i = 0; i < totEntries; i++){
 		block_num[i] = 0;
