@@ -13,6 +13,16 @@ using namespace std;
 
 #include "cache.h"
 
+//make a struct for a directory entry
+struct ENTRY{
+	ulong block_num;
+	int inUse;
+	uchar blk_state;
+	int bitVector[4]; //keeps track of what caches have this block cached
+};
+
+//int x = 0; //keeps track of where to insert next entry in directory
+
 int main(int argc, char *argv[])
 {
 	
@@ -67,42 +77,26 @@ int main(int argc, char *argv[])
 	int cached = 0;
 	uchar op;
 	ulong address;
+	int  x = 0; //keeps track of where to insert next entry in directory
+	int * xp;
+	xp = &x;
 
-	//make the directory
-	//int totEntries = (cache_size / blk_size) * num_processors;
-	int totEntries = 2;
-	ulong * block_num = new ulong[totEntries];
+	int totEntries = (cache_size / blk_size) * num_processors;
+	//int totEntries = 2;
+
+	ENTRY dir[totEntries]; //make the directory
+
+	//initialize all parts of entries in the directory to initial values
 	for(int i = 0; i < totEntries; i++){
-		block_num[i] = 0;
-	}
-	//ulong block_num[totEntries];
-	//memset(block_num, 0, sizeof(block_num));
-	int * inUse = new int[totEntries];
-	for(int i = 0; i < totEntries; i ++){
-		inUse[i] = 0;
-	}
-	//int inUse[totEntries];
-	//memset(inUse, 0, sizeof(inUse));
-	uchar * blk_state = new uchar[totEntries];
-	for(int i = 0; i < totEntries; i++){
-		blk_state[i] = 'U';
-	}
-	//uchar blk_state[totEntries]; // 'E' = EM state
-	//memset(blk_state, 'U', sizeof(blk_state));
-	int ** bitVector = new int*[totEntries];
-	for(int i = 0; i < totEntries; i++){
-		bitVector[i] = new int[4];
-	}
-	for(int i = 0; i < totEntries; i++){
-		for(int j = 0; j < 4; j++){
-			bitVector[i][j] = 0;
+		dir[i].block_num = 0;
+		dir[i].inUse = 0;
+		dir[i].blk_state = 'U';
+		for(int q = 0; q < num_processors; q++){
+			dir[i].bitVector[q] = 0;
 		}
 	}
-	
-	//int bitVector[totEntries][num_processors]; //1 = in this cache, 0 = not in this cache
-	//memset(bitVector, 0, sizeof(bitVector));
-	int x = 0; //keeps track of where to insert next entry in directory
-	x = 0;
+	printf("%i %c %i\n", (int)dir[511].block_num, dir[511].blk_state, dir[511].bitVector[3]);
+	printf("%i\n", totEntries);
 
 	while(!feof(pFile)) {
 		shared = 0;
@@ -112,15 +106,6 @@ int main(int argc, char *argv[])
 
 		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
 
-		/*for (int i = 0; i < num_processors; i++) {
-			if (i != proc_num) {
-				if(cachesArray[i]->findLine(address) != NULL){
-					shared = 1;
-					break;
-				}
-			}
-		}*/
-
 		if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
 			cached = 1;
 
@@ -129,60 +114,60 @@ int main(int argc, char *argv[])
 		for(int i = 0; i < totEntries; i++){//look for block in directory
 		tempLine = -1;
 
-			if(inUse[i] == 1){
-				if(block_num[i] == tag){ //found in directory
+			if(dir[i].inUse == 1){
+				if(dir[i].block_num == tag){ //found in directory
 					tempLine = i;
-					if(blk_state[i] == 'U'){
+					if(dir[i].blk_state == 'U'){
 						if(op == 'w'){ //write
-							blk_state[i] = 'E';
-							bitVector[i][proc_num] = 1;
+							dir[i].blk_state = 'E';
+							dir[i].bitVector[proc_num] = 1;
 						}
 						else if(cached == 0){ //read
 							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (bitVector[i][q] == 1) ){ //block is shared
+								if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){ //block is shared
 									shared = 1;
 									break;
 								}
 							}
 							if(shared == 1){
-								blk_state[i] = 'S';
-								bitVector[i][proc_num] = 1;
+								dir[i].blk_state = 'S';
+								dir[i].bitVector[proc_num] = 1;
 							}
 							else{
-								blk_state[i] = 'E';
-								bitVector[i][proc_num] = 1;
+								dir[i].blk_state = 'E';
+								dir[i].bitVector[proc_num] = 1;
 							}							
 						}
 					}
-					else if(blk_state[i] == 'S'){
+					else if(dir[i].blk_state == 'S'){
 						if(op == 'r' && cached == 0){ //read
-							bitVector[i][proc_num] = 1;
+							dir[i].bitVector[proc_num] = 1;
 							shared = 1;
 						}
 						else{ //write
-							blk_state[i] = 'E';
-							bitVector[i][proc_num] = 1;
+							dir[i].blk_state = 'E';
+							dir[i].bitVector[proc_num] = 1;
 							shared = 1;
 							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (bitVector[i][q] == 1) ){
+								if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
 									cachesArray[i]->snoopRequest(address, 'W');
 								}
 							}
 						}
 					}
-					else if(blk_state[i] == 'E'){
+					else if(dir[i].blk_state == 'E'){
 						if(op == 'r' && cached == 0){ //read
-							blk_state[i] = 'S';
-							bitVector[i][proc_num] = 1;
+							dir[i].blk_state = 'S';
+							dir[i].bitVector[proc_num] = 1;
 							//maybe ctcTransfers only happen here? B/c of Interrupt?
 						}
 						else if(op == 'w' && cached == 0){ //write
 							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (bitVector[i][q] == 1) ){
+								if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
 									cachesArray[i]->snoopRequest(address, 'W');
 								}
 							}
-							bitVector[i][proc_num] = 1;
+							dir[i].bitVector[proc_num] = 1;
 						}
 					}
 					break;
@@ -191,13 +176,16 @@ int main(int argc, char *argv[])
 		}
 
 		//block is not in directory at all - a read or write op will have same results
-		if(tempLine == -1){
+		//printf("%i", *xp);
+		if(tempLine == -1 && *xp < 512){
+			//printf("%i", x);
 			shared = 0;
-			block_num[x] = tag;
-			inUse[x] = 1;
-			blk_state[x] = 'E';
-			//bitVector[x][proc_num] = 1;
-			x++;
+			dir[x].block_num = tag;
+			dir[x].inUse = 1;
+			dir[x].blk_state = 'E';
+			dir[x].bitVector[proc_num] = 1;
+			*xp = *xp + 1;
+			//printf("%i\n", *xp);
 		}
 
 
@@ -210,6 +198,7 @@ int main(int argc, char *argv[])
 			}
 		}*/
 	}
+	printf("%i\n", *xp);
 	fclose(pFile);
 
 	//********************************//
