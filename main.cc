@@ -107,24 +107,31 @@ int main(int argc, char *argv[])
 
 		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
 		line++;
-	//	printf("Line %i: %i %c %lx\n", line, proc_num, op, address);
+		printf("Line %i: %i %c %lx\n", line, proc_num, op, address);
 
 		if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
 			cached = 1;
-
+		//printf("Cached check\n");
 		ulong tag = ( address >> (ulong)log2(blk_size) );
-
+		//printf("Tagged\n");
 		for(int i = 0; i < totEntries; i++){
+			//printf("Entered for\n");
 			if(dir[i].block_num == tag){
+				//printf("Entered if\n");
 				for(int q = 0; q < num_processors; q++){
+					printf("Entered second for. q = %i\n", q);
 					if(cachesArray[q]->findLine(address) == NULL){
+						printf("Entered second if\n");
 						dir[i].bitVector[q] = 0;
 					}
 				}
-				if(dir[i].bitVector[0] == 0 && dir[i].bitVector[1] == 0 && dir[i].bitVector[2] == 0 && dir[i].bitVector[3] == 0)
+				if(dir[i].bitVector[0] == 0 && dir[i].bitVector[1] == 0 && dir[i].bitVector[2] == 0 && dir[i].bitVector[3] == 0){
+					//printf("Entered third if\n");
 					dir[i].inUse = 0;
+				}
 			}
 		}
+		//printf("After first for\n");
 
 		int tempLine = -1;
 		for(int i = 0; i < totEntries; i++){//look for block in directory
@@ -212,7 +219,7 @@ int main(int argc, char *argv[])
 
 		//block is not in directory at all - a read or write op will have same results
 	//	printf("%i\n", *xp);
-		if(tempLine == -1 && *xp < 512){
+		if(tempLine == -1){
 	//		printf("Inside last if: x = %i\n", x);
 			shared = 0;
 			dir[x].block_num = tag;
