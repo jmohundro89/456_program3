@@ -107,34 +107,39 @@ int main(int argc, char *argv[])
 
 		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
 		line++;
-		printf("Line %i: %i %c %lx\n", line, proc_num, op, address);
+		//printf("Line %i: %i %c %lx\n", line, proc_num, op, address);
 
 		if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
 			cached = 1;
 		//printf("Cached check\n");
 		ulong tag = ( address >> (ulong)log2(blk_size) );
 		//printf("Tagged\n");
-		for(int i = 0; i < totEntries; i++){
+		//printf("x = %i\n", x);
+		for(int i = 0; i < x; i++){
 			//printf("Entered for\n");
-			if(dir[i].block_num == tag){
+			if(dir[i].inUse == 1){
+				if(dir[i].block_num == tag){
 				//printf("Entered if\n");
-				for(int q = 0; q < num_processors; q++){
-					printf("Entered second for. q = %i\n", q);
-					if(cachesArray[q]->findLine(address) == NULL){
-						printf("Entered second if\n");
-						dir[i].bitVector[q] = 0;
+					for(int q = 0; q < num_processors; q++){
+						//printf("Entered second for. q = %i\n", q);
+						if(cachesArray[q]->findLine(address) == NULL){
+							//printf("Entered second if\n");
+							dir[i].bitVector[q] = 0;
+						}
 					}
-				}
-				if(dir[i].bitVector[0] == 0 && dir[i].bitVector[1] == 0 && dir[i].bitVector[2] == 0 && dir[i].bitVector[3] == 0){
-					//printf("Entered third if\n");
-					dir[i].inUse = 0;
+					if(dir[i].bitVector[0] == 0 && dir[i].bitVector[1] == 0 && dir[i].bitVector[2] == 0 && dir[i].bitVector[3] == 0){
+						//printf("Entered third if\n");
+						dir[i].inUse = 0;
+					}
+					//break;
 				}
 			}
+			
 		}
 		//printf("After first for\n");
 
 		int tempLine = -1;
-		for(int i = 0; i < totEntries; i++){//look for block in directory
+		for(int i = 0; i < x; i++){//look for block in directory
 		tempLine = -1;
 
 				if(dir[i].inUse == 1){
@@ -155,7 +160,12 @@ int main(int argc, char *argv[])
 									if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){ //block is shared
 	//									printf("Inside sixth if (137)\n");
 										shared = 1;
-										break;
+										for(int q = 0; q < num_processors; q++){
+											if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
+	//											printf("Inside twelfth if (168)\n");
+												cachesArray[q]->snoopRequest(address, 'R');
+											}
+										}
 									}
 								}
 								if(shared == 1){
@@ -176,6 +186,12 @@ int main(int argc, char *argv[])
 	//							printf("Inside tenth if (157)\n");
 								dir[i].bitVector[proc_num] = 1;
 								shared = 1;
+								for(int q = 0; q < num_processors; q++){
+									if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
+	//									printf("Inside twelfth if (168)\n");
+										cachesArray[q]->snoopRequest(address, 'R');
+									}
+								}
 							}
 							else if(op == 'w'){ //write
 	//							printf("Inside eleventh if (162)\n");
@@ -196,6 +212,13 @@ int main(int argc, char *argv[])
 	//							printf("Inside fourteenth if (177)\n");
 								dir[i].blk_state = 'S';
 								dir[i].bitVector[proc_num] = 1;
+								shared = 1;
+								for(int q = 0; q < num_processors; q++){
+									if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
+	//									printf("Inside twelfth if (168)\n");
+										cachesArray[q]->snoopRequest(address, 'R');
+									}
+								}
 								//printf("Ctc\n");
 								cachesArray[proc_num]->cacheTrans();
 								//maybe ctcTransfers only happen here? B/c of Interrupt?
@@ -219,7 +242,7 @@ int main(int argc, char *argv[])
 
 		//block is not in directory at all - a read or write op will have same results
 	//	printf("%i\n", *xp);
-		if(tempLine == -1){
+		if(tempLine == -1 && *xp < totEntries){
 	//		printf("Inside last if: x = %i\n", x);
 			shared = 0;
 			dir[x].block_num = tag;
@@ -233,12 +256,6 @@ int main(int argc, char *argv[])
 
 		uchar busOps = cachesArray[proc_num]->Access(address, op, shared);
 		busOps = 'C';
-
-		/*for (int i = 0; i < num_processors; i++) {
-			if (i != proc_num) {
-				cachesArray[i]->snoopRequest(address, busOps);
-			}
-		}*/
 	}
 	//printf("Outside of while loop: *xp = %i\n", *xp);
 	fclose(pFile);
@@ -246,7 +263,7 @@ int main(int argc, char *argv[])
 	//********************************//
 	//print out all caches' statistics //
 	//********************************//
-	printf("===== 506 SMP Simulator Configuration =====\n");
+	printf("===== 506 DSM (MESI with Full-bit Vector Simulator Configuration =====\n");
 	printf("L1_SIZE:               %d\n", cache_size);
 	printf("L1_ASSOC:              %d\n", cache_assoc);
 	printf("L1_BLOCKSIZE:          %d\n", blk_size);
