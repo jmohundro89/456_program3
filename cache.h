@@ -75,6 +75,7 @@ public:
    ulong getWB(){return writeBacks;}
    
    void writeBack(ulong)   {writeBacks++;}
+   void cacheTrans() {ctcTransfers++;}
    uchar Access(ulong,uchar,int);
    void printStats(int);
    void updateLRU(cacheLine *);

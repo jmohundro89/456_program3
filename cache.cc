@@ -70,7 +70,7 @@ uchar Cache::Access(ulong addr,uchar op, int shared)
          writeMisses++;
          newLine->setFlags(MODIFIED);
          if(shared == 1)
-            ctcTransfers++;
+            //ctcTransfers++;
 
          return 'W';
       } 
@@ -80,7 +80,7 @@ uchar Cache::Access(ulong addr,uchar op, int shared)
          if(shared == 1)
          {
             newLine->setFlags(SHARED);
-            ctcTransfers++;
+            //ctcTransfers++;
          }
          else
          {

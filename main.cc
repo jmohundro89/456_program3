@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
 	char *fname =  (char *)malloc(20);
  	fname = argv[4];
  	int num_processors = 4;
-
 	
 	//****************************************************//
 	//**printf("===== Simulator configuration =====\n");**//
@@ -95,9 +94,11 @@ int main(int argc, char *argv[])
 			dir[i].bitVector[q] = 0;
 		}
 	}
-	printf("%i %c %i\n", (int)dir[511].block_num, dir[511].blk_state, dir[511].bitVector[3]);
-	printf("%i\n", totEntries);
+	//printf("%i %c %i\n", (int)dir[511].block_num, dir[511].blk_state, dir[511].bitVector[3]);
+	//printf("%i\n", totEntries);
+	//printf("%i\n", *xp);
 
+	int line = 0;
 	while(!feof(pFile)) {
 		shared = 0;
 		cached = 0;
@@ -105,6 +106,8 @@ int main(int argc, char *argv[])
 			break;
 
 		sscanf(currLine, "%i %c %lx", &proc_num, &op, &address);
+		line++;
+	//	printf("Line %i: %i %c %lx\n", line, proc_num, op, address);
 
 		if(cachesArray[proc_num]->findLine(address) != NULL) //check to see if the requesting proc already has the block in its cache - if so, directory doesn't need to do anything if it's a read hit
 			cached = 1;
@@ -114,71 +117,90 @@ int main(int argc, char *argv[])
 		for(int i = 0; i < totEntries; i++){//look for block in directory
 		tempLine = -1;
 
-			if(dir[i].inUse == 1){
-				if(dir[i].block_num == tag){ //found in directory
-					tempLine = i;
-					if(dir[i].blk_state == 'U'){
-						if(op == 'w'){ //write
-							dir[i].blk_state = 'E';
-							dir[i].bitVector[proc_num] = 1;
-						}
-						else if(cached == 0){ //read
-							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){ //block is shared
-									shared = 1;
-									break;
-								}
-							}
-							if(shared == 1){
-								dir[i].blk_state = 'S';
-								dir[i].bitVector[proc_num] = 1;
-							}
-							else{
+				if(dir[i].inUse == 1){
+	//		printf("Inside first if (122)\n");
+					if(dir[i].block_num == tag){ //found in directory
+	//		printf("Inside second if (124)\n");
+						tempLine = i;
+						if(dir[i].blk_state == 'U'){
+	//		printf("Inside third if (127)\n");
+							if(op == 'w'){ //write
+	//  	 	printf("Inside fourth if (129)\n");
 								dir[i].blk_state = 'E';
 								dir[i].bitVector[proc_num] = 1;
-							}							
+							}
+							else if(cached == 0){ //read miss
+	//		printf("Inside fifth if (134)\n");
+								for(int q = 0; q < num_processors; q++){
+									if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){ //block is shared
+	//									printf("Inside sixth if (137)\n");
+										shared = 1;
+										break;
+									}
+								}
+								if(shared == 1){
+	//								printf("Inside seventh if (143)\n");
+									dir[i].blk_state = 'S';
+									dir[i].bitVector[proc_num] = 1;
+								}
+								else{
+	//								printf("Inside eighth if (148)\n");
+									dir[i].blk_state = 'E';
+									dir[i].bitVector[proc_num] = 1;
+								}							
+							}
 						}
-					}
-					else if(dir[i].blk_state == 'S'){
-						if(op == 'r' && cached == 0){ //read
-							dir[i].bitVector[proc_num] = 1;
-							shared = 1;
-						}
-						else{ //write
-							dir[i].blk_state = 'E';
-							dir[i].bitVector[proc_num] = 1;
-							shared = 1;
-							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
-									cachesArray[i]->snoopRequest(address, 'W');
+						else if(dir[i].blk_state == 'S'){
+	//						printf("Inside ninth if (155)\n");
+							if(op == 'r' && cached == 0){ //read miss
+	//							printf("Inside tenth if (157)\n");
+								dir[i].bitVector[proc_num] = 1;
+								shared = 1;
+							}
+							else if(op == 'w'){ //write
+	//							printf("Inside eleventh if (162)\n");
+								dir[i].blk_state = 'E';
+								dir[i].bitVector[proc_num] = 1;
+								shared = 1;
+								for(int q = 0; q < num_processors; q++){
+									if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
+	//									printf("Inside twelfth if (168)\n");
+										cachesArray[q]->snoopRequest(address, 'W');
+									}
 								}
 							}
 						}
-					}
-					else if(dir[i].blk_state == 'E'){
-						if(op == 'r' && cached == 0){ //read
-							dir[i].blk_state = 'S';
-							dir[i].bitVector[proc_num] = 1;
-							//maybe ctcTransfers only happen here? B/c of Interrupt?
-						}
-						else if(op == 'w' && cached == 0){ //write
-							for(int q = 0; q < num_processors; q++){
-								if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
-									cachesArray[i]->snoopRequest(address, 'W');
-								}
+						else if(dir[i].blk_state == 'E'){
+	//						printf("Inside thirteenth if (175)\n");
+							if(op == 'r' && cached == 0){ //read miss
+	//							printf("Inside fourteenth if (177)\n");
+								dir[i].blk_state = 'S';
+								dir[i].bitVector[proc_num] = 1;
+								//printf("Ctc\n");
+								cachesArray[proc_num]->cacheTrans();
+								//maybe ctcTransfers only happen here? B/c of Interrupt?
 							}
-							dir[i].bitVector[proc_num] = 1;
+							else if(op == 'w' && cached == 0){ //write
+	//							printf("Inside fifteenth if (183)\n");
+								for(int q = 0; q < num_processors; q++){
+									if( (q != proc_num) && (dir[i].bitVector[q] == 1) ){
+	//									printf("Inside sixteenth if (186)\n");
+										cachesArray[q]->snoopRequest(address, 'W');
+									}
+								}
+								dir[i].bitVector[proc_num] = 1;
+							}
 						}
+						break;
 					}
-					break;
 				}
-			}
+			//printf("i = %i\n", i);
 		}
 
 		//block is not in directory at all - a read or write op will have same results
-		//printf("%i", *xp);
+	//	printf("%i\n", *xp);
 		if(tempLine == -1 && *xp < 512){
-			//printf("%i", x);
+	//		printf("Inside last if: x = %i\n", x);
 			shared = 0;
 			dir[x].block_num = tag;
 			dir[x].inUse = 1;
@@ -198,7 +220,7 @@ int main(int argc, char *argv[])
 			}
 		}*/
 	}
-	printf("%i\n", *xp);
+	//printf("Outside of while loop: *xp = %i\n", *xp);
 	fclose(pFile);
 
 	//********************************//
