@@ -113,6 +113,19 @@ int main(int argc, char *argv[])
 			cached = 1;
 
 		ulong tag = ( address >> (ulong)log2(blk_size) );
+
+		for(int i = 0; i < totEntries; i++){
+			if(dir[i].block_num == tag){
+				for(int q = 0; q < num_processors; q++){
+					if(cachesArray[q]->findLine(address) == NULL){
+						dir[i].bitVector[q] = 0;
+					}
+				}
+				if(dir[i].bitVector[0] == 0 && dir[i].bitVector[1] == 0 && dir[i].bitVector[2] == 0 && dir[i].bitVector[3] == 0)
+					dir[i].inUse = 0;
+			}
+		}
+
 		int tempLine = -1;
 		for(int i = 0; i < totEntries; i++){//look for block in directory
 		tempLine = -1;
